@@ -79,7 +79,15 @@
 
             <!-- ASCII Output Section (Empty) -->
             <section id="ascii-section" class="ascii-section" aria-label="ASCII Output">
-                <h2 class="section-title">ASCII Output</h2>
+                <div class="ascii-header">
+                    <h2 class="section-title">ASCII Output</h2>
+                    <div class="export-actions">
+                        <button type="button" id="copy-btn" class="export-button" disabled aria-label="Copy ASCII art to clipboard">Copy ASCII</button>
+                        <button type="button" id="download-txt-btn" class="export-button" disabled aria-label="Download ASCII art as text file">Download TXT</button>
+                        <button type="button" id="download-png-btn" class="export-button" disabled aria-label="Download ASCII art as PNG image">Download PNG</button>
+                    </div>
+                </div>
+                <div id="export-feedback" class="export-feedback" role="status" aria-live="polite" hidden></div>
                 <pre id="ascii-output" class="ascii-box" aria-live="polite"></pre>
             </section>
         </main>

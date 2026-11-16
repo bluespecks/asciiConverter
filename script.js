@@ -1,5 +1,5 @@
 /**
- * asciiConverter — Phase 2: Customisation Controls
+ * asciiConverter — Phase 3: Export Functionality
  * Lightweight, browser-based image-to-ASCII converter.
  */
 
@@ -11,10 +11,18 @@ const FONT_ASPECT_RATIO = 0.5; // Monospace characters are roughly twice as tall
 const CHARACTER_RAMP = "@#S%?*+;:,. ";
 const SUPPORTED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
+// PNG export styling constants
+const EXPORT_FONT_FAMILY = 'Consolas, "Courier New", Courier, monospace';
+const DEFAULT_EXPORT_FONT_SIZE = 14;
+const EXPORT_PADDING = 24;
+const MAX_CANVAS_DIMENSION = 8192; // Browser safety limit for canvas dimensions
+
 // State
 let currentObjectUrl = null;
 let currentImage = null;
+let currentAsciiText = '';
 let renderScheduled = false;
+let feedbackTimer = null;
 
 /**
  * Calculates output character dimensions preserving image aspect ratio
@@ -70,9 +78,7 @@ function calculateContrastFactor(contrast) {
  * @returns {number} Adjusted luminance clamped to [0, 255].
  */
 function adjustLuminance(luminance, brightness, contrastFactor) {
-    // Apply contrast scaling centered around midpoint 128
     const contrastAdjusted = (luminance - 128) * contrastFactor + 128;
-    // Apply brightness offset (-100 to +100 maps to -255 to +255)
     const brightnessOffset = (brightness / 100) * 255;
     const finalLuminance = contrastAdjusted + brightnessOffset;
     return Math.max(0, Math.min(255, finalLuminance));
@@ -158,15 +164,32 @@ function processPixelsToAscii(
 }
 
 /**
- * Renders the ASCII art inside the output container using textContent.
+ * Enables or disables the export action buttons based on content availability.
+ *
+ * @param {boolean} hasContent - Whether valid ASCII content is available.
+ */
+function updateExportButtonsState(hasContent) {
+    const copyBtn = document.getElementById('copy-btn');
+    const downloadTxtBtn = document.getElementById('download-txt-btn');
+    const downloadPngBtn = document.getElementById('download-png-btn');
+
+    if (copyBtn) copyBtn.disabled = !hasContent;
+    if (downloadTxtBtn) downloadTxtBtn.disabled = !hasContent;
+    if (downloadPngBtn) downloadPngBtn.disabled = !hasContent;
+}
+
+/**
+ * Renders the ASCII art inside the output container using textContent and updates state.
  *
  * @param {string} asciiText - Formatted ASCII string.
  */
 function renderAsciiOutput(asciiText) {
+    currentAsciiText = asciiText || '';
     const outputElement = document.getElementById('ascii-output');
     if (outputElement) {
-        outputElement.textContent = asciiText;
+        outputElement.textContent = currentAsciiText;
     }
+    updateExportButtonsState(Boolean(currentAsciiText));
 }
 
 /**
@@ -226,6 +249,32 @@ function clearRampError() {
         rampErrorElement.textContent = '';
         rampErrorElement.setAttribute('hidden', '');
     }
+}
+
+/**
+ * Displays feedback status messages for export operations.
+ *
+ * @param {string} message - Notification text.
+ * @param {boolean} [isError=false] - Whether this is an error notification.
+ */
+function showExportFeedback(message, isError = false) {
+    const feedback = document.getElementById('export-feedback');
+    if (!feedback) return;
+
+    if (feedbackTimer) {
+        clearTimeout(feedbackTimer);
+        feedbackTimer = null;
+    }
+
+    feedback.textContent = message;
+    feedback.className = `export-feedback ${isError ? 'error' : 'success'}`;
+    feedback.removeAttribute('hidden');
+
+    feedbackTimer = setTimeout(() => {
+        feedback.setAttribute('hidden', '');
+        feedback.textContent = '';
+        feedback.className = 'export-feedback';
+    }, 4000);
 }
 
 /**
@@ -338,6 +387,215 @@ function resetControls() {
 
     if (currentImage) {
         generateAscii();
+    }
+}
+
+/**
+ * Exports the current ASCII art as a text (.txt) file.
+ * Preserves all whitespace and line breaks without trimming.
+ */
+function downloadTxt() {
+    if (!currentAsciiText) {
+        showExportFeedback('Please upload an image first before exporting.', true);
+        return;
+    }
+
+    try {
+        const blob = new Blob([currentAsciiText], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'ascii-art.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        showExportFeedback('Downloaded ascii-art.txt successfully.');
+    } catch (err) {
+        console.error('TXT export failed:', err);
+        showExportFeedback('Failed to export TXT file.', true);
+    }
+}
+
+/**
+ * Copies the current ASCII art to the clipboard.
+ * Preserves exact whitespace and line breaks.
+ */
+async function copyToClipboard() {
+    if (!currentAsciiText) {
+        showExportFeedback('Please upload an image first before exporting.', true);
+        return;
+    }
+
+    const copyBtn = document.getElementById('copy-btn');
+    const originalText = copyBtn ? copyBtn.textContent : 'Copy ASCII';
+
+    function execCommandFallback() {
+        const textarea = document.createElement('textarea');
+        textarea.value = currentAsciiText;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        textarea.style.top = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        return successful;
+    }
+
+    let copied = false;
+
+    // Try modern Clipboard API first
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+            await navigator.clipboard.writeText(currentAsciiText);
+            copied = true;
+        } catch (clipboardErr) {
+            // Fall back to execCommand if writeText fails (e.g. document not focused or permission denied)
+            try {
+                copied = execCommandFallback();
+            } catch (fallbackErr) {
+                copied = false;
+            }
+        }
+    } else {
+        try {
+            copied = execCommandFallback();
+        } catch (fallbackErr) {
+            copied = false;
+        }
+    }
+
+    if (copied) {
+        showExportFeedback('Copied to clipboard!');
+        if (copyBtn) {
+            copyBtn.textContent = 'Copied!';
+            setTimeout(() => {
+                copyBtn.textContent = originalText;
+            }, 2000);
+        }
+    } else {
+        showExportFeedback('Unable to access clipboard. Check browser permissions.', true);
+    }
+}
+
+/**
+ * Renders the ASCII art text onto a dark-themed canvas with typography metrics and padding.
+ *
+ * @param {string} asciiText - The ASCII art string to render.
+ * @returns {HTMLCanvasElement} Canvas containing rendered ASCII artwork.
+ */
+function renderAsciiToCanvas(asciiText) {
+    if (!asciiText) {
+        throw new Error('No ASCII content to render.');
+    }
+
+    const lines = asciiText.split('\n');
+    let maxLineLength = 0;
+    for (const line of lines) {
+        if (line.length > maxLineLength) {
+            maxLineLength = line.length;
+        }
+    }
+
+    if (maxLineLength === 0 || lines.length === 0) {
+        throw new Error('ASCII content is empty.');
+    }
+
+    let fontSize = DEFAULT_EXPORT_FONT_SIZE;
+    const measureCanvas = document.createElement('canvas');
+    const measureCtx = measureCanvas.getContext('2d');
+    measureCtx.font = `${fontSize}px ${EXPORT_FONT_FAMILY}`;
+    let charWidth = measureCtx.measureText('M').width;
+    let lineHeight = Math.round(fontSize * 1.25);
+
+    let requiredWidth = Math.ceil(maxLineLength * charWidth + EXPORT_PADDING * 2);
+    let requiredHeight = Math.ceil(lines.length * lineHeight + EXPORT_PADDING * 2);
+
+    // Safeguard for unusually large canvas dimensions
+    if (requiredWidth > MAX_CANVAS_DIMENSION || requiredHeight > MAX_CANVAS_DIMENSION) {
+        const scale = Math.min(
+            MAX_CANVAS_DIMENSION / requiredWidth,
+            MAX_CANVAS_DIMENSION / requiredHeight
+        );
+        if (scale < 0.25) {
+            throw new Error('Artwork dimensions exceed safe canvas rendering limits.');
+        }
+        fontSize = Math.max(6, Math.floor(fontSize * scale));
+        measureCtx.font = `${fontSize}px ${EXPORT_FONT_FAMILY}`;
+        charWidth = measureCtx.measureText('M').width;
+        lineHeight = Math.round(fontSize * 1.25);
+        requiredWidth = Math.ceil(maxLineLength * charWidth + EXPORT_PADDING * 2);
+        requiredHeight = Math.ceil(lines.length * lineHeight + EXPORT_PADDING * 2);
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = requiredWidth;
+    canvas.height = requiredHeight;
+    const ctx = canvas.getContext('2d');
+
+    // Fill dark background matching application theme (--bg-primary #0d1117)
+    ctx.fillStyle = '#0d1117';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Set typography and readable light foreground color (--text-primary #e6edf3)
+    ctx.font = `${fontSize}px ${EXPORT_FONT_FAMILY}`;
+    ctx.fillStyle = '#e6edf3';
+    ctx.textBaseline = 'top';
+
+    // Render characters preserving all whitespace and line breaks
+    for (let i = 0; i < lines.length; i++) {
+        const y = EXPORT_PADDING + i * lineHeight;
+        ctx.fillText(lines[i], EXPORT_PADDING, y);
+    }
+
+    return canvas;
+}
+
+/**
+ * Exports the current ASCII art as a rendered PNG image file.
+ */
+function downloadPng() {
+    if (!currentAsciiText) {
+        showExportFeedback('Please upload an image first before exporting.', true);
+        return;
+    }
+
+    try {
+        const canvas = renderAsciiToCanvas(currentAsciiText);
+
+        if (canvas.toBlob) {
+            canvas.toBlob((blob) => {
+                if (!blob) {
+                    showExportFeedback('Failed to generate PNG image.', true);
+                    return;
+                }
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'ascii-art.png';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 5000);
+                showExportFeedback('Downloaded ascii-art.png successfully.');
+            }, 'image/png');
+        } else {
+            // Data URL fallback
+            const dataUrl = canvas.toDataURL('image/png');
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = 'ascii-art.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showExportFeedback('Downloaded ascii-art.png successfully.');
+        }
+    } catch (err) {
+        console.error('PNG export failed:', err);
+        showExportFeedback(err.message || 'Failed to export PNG image.', true);
     }
 }
 
@@ -462,6 +720,25 @@ function setupControlListeners() {
 }
 
 /**
+ * Binds event listeners to export buttons.
+ */
+function setupExportListeners() {
+    const copyBtn = document.getElementById('copy-btn');
+    const downloadTxtBtn = document.getElementById('download-txt-btn');
+    const downloadPngBtn = document.getElementById('download-png-btn');
+
+    if (copyBtn) {
+        copyBtn.addEventListener('click', copyToClipboard);
+    }
+    if (downloadTxtBtn) {
+        downloadTxtBtn.addEventListener('click', downloadTxt);
+    }
+    if (downloadPngBtn) {
+        downloadPngBtn.addEventListener('click', downloadPng);
+    }
+}
+
+/**
  * Application initialization.
  */
 function init() {
@@ -473,6 +750,8 @@ function init() {
     }
 
     setupControlListeners();
+    setupExportListeners();
+    updateExportButtonsState(false);
 
     console.log('asciiConverter initialized successfully.');
 }
@@ -498,6 +777,12 @@ if (typeof module !== 'undefined' && module.exports) {
         isValidImageFile,
         isValidRamp,
         resetControls,
+        renderAsciiToCanvas,
+        downloadTxt,
+        downloadPng,
+        copyToClipboard,
+        getAsciiText: () => currentAsciiText,
+        setAsciiText: (text) => { currentAsciiText = text; },
         CHARACTER_RAMP,
         DEFAULT_OUTPUT_WIDTH,
         DEFAULT_BRIGHTNESS,
