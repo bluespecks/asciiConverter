@@ -31,6 +31,52 @@
                 <div id="image-preview" class="preview-box"></div>
             </section>
 
+            <!-- Customisation Controls Section -->
+            <section id="settings-section" class="settings-section" aria-label="Customisation Controls">
+                <div class="settings-header">
+                    <h2 class="section-title">Customisation Controls</h2>
+                    <button type="button" id="reset-btn" class="reset-button">Reset Settings</button>
+                </div>
+
+                <div class="controls-grid">
+                    <!-- Output Width Control -->
+                    <div class="control-group">
+                        <div class="control-header">
+                            <label for="width-slider" class="control-label">Output Width</label>
+                            <span id="width-value" class="control-value">100</span>
+                        </div>
+                        <input type="range" id="width-slider" class="range-slider" min="40" max="200" value="100" step="10" aria-label="Output width in characters">
+                    </div>
+
+                    <!-- Character Ramp Control -->
+                    <div class="control-group ramp-group">
+                        <div class="control-header">
+                            <label for="ramp-input" class="control-label">Character Ramp (Dark &rarr; Light)</label>
+                        </div>
+                        <input type="text" id="ramp-input" class="ramp-input" value="@#S%?*+;:,. " spellcheck="false" aria-label="Character ramp sequence">
+                        <span id="ramp-error" class="control-error" role="alert" hidden></span>
+                    </div>
+
+                    <!-- Brightness Control -->
+                    <div class="control-group">
+                        <div class="control-header">
+                            <label for="brightness-slider" class="control-label">Brightness</label>
+                            <span id="brightness-value" class="control-value">0</span>
+                        </div>
+                        <input type="range" id="brightness-slider" class="range-slider" min="-100" max="100" value="0" step="1" aria-label="Brightness adjustment">
+                    </div>
+
+                    <!-- Contrast Control -->
+                    <div class="control-group">
+                        <div class="control-header">
+                            <label for="contrast-slider" class="control-label">Contrast</label>
+                            <span id="contrast-value" class="control-value">0</span>
+                        </div>
+                        <input type="range" id="contrast-slider" class="range-slider" min="-100" max="100" value="0" step="1" aria-label="Contrast adjustment">
+                    </div>
+                </div>
+            </section>
+
             <!-- ASCII Output Section (Empty) -->
             <section id="ascii-section" class="ascii-section" aria-label="ASCII Output">
                 <h2 class="section-title">ASCII Output</h2>
