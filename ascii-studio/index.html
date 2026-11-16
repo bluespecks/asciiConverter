@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCII Studio</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1 class="app-title">ASCII Studio</h1>
+            <p class="app-description">A lightweight, browser-based image-to-ASCII converter.</p>
+        </header>
+
+        <main class="app-main">
+            <!-- Image Upload Section -->
+            <section class="upload-section">
+                <label for="image-input" class="upload-label">
+                    <span class="upload-text">Choose an Image</span>
+                    <input type="file" id="image-input" class="file-input" accept="image/*">
+                </label>
+            </section>
+
+            <!-- Image Preview Section (Empty) -->
+            <section id="preview-section" class="preview-section" aria-label="Image Preview">
+                <h2 class="section-title">Image Preview</h2>
+                <div id="image-preview" class="preview-box"></div>
+            </section>
+
+            <!-- ASCII Output Section (Empty) -->
+            <section id="ascii-section" class="ascii-section" aria-label="ASCII Output">
+                <h2 class="section-title">ASCII Output</h2>
+                <pre id="ascii-output" class="ascii-box" aria-live="polite"></pre>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
