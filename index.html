@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ASCII Studio</title>
+    <title>asciiConverter</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="app-container">
         <header class="app-header">
-            <h1 class="app-title">ASCII Studio</h1>
+            <h1 class="app-title">asciiConverter</h1>
             <p class="app-description">A lightweight, browser-based image-to-ASCII converter.</p>
         </header>
 
@@ -18,9 +18,12 @@
             <section class="upload-section">
                 <label for="image-input" class="upload-label">
                     <span class="upload-text">Choose an Image</span>
-                    <input type="file" id="image-input" class="file-input" accept="image/*">
+                    <input type="file" id="image-input" class="file-input" accept="image/png, image/jpeg, image/webp">
                 </label>
             </section>
+
+            <!-- Error Message Display -->
+            <div id="error-message" class="error-message" role="alert" aria-live="assertive" hidden></div>
 
             <!-- Image Preview Section (Empty) -->
             <section id="preview-section" class="preview-section" aria-label="Image Preview">
